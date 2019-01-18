@@ -1,0 +1,33 @@
+{
+    "name": "content-review-log",
+    "version": "1.1.0",
+    "description": "Logs changes to review status of scripts on a Fandom wiki.",
+    "keywords": [
+        "wikia",
+        "fandom",
+        "discord",
+        "webhook"
+    ],
+    "license": "GPLv3",
+    "author": {
+        "name": "KockaAdmiralac",
+        "email": "1405223@gmail.com",
+        "url": "https://github.com/KockaAdmiralac"
+    },
+    "contributors": [],
+    "main": "main.js",
+    "scripts": {
+        "config": "node config.js",
+        "start": "node main.js",
+        "update": "git pull origin master"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/KockaAdmiralac/ContentReviewLog.git"
+    },
+    "dependencies": {
+        "eslint": ">=5.12.0",
+        "request": ">=2.88.0",
+        "request-promise-native": ">=1.0.5"
+    }
+}

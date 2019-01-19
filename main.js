@@ -82,6 +82,7 @@ class ContentReviewLog {
             this._poll.bind(this),
             config.interval
         );
+        process.on('SIGINT', this._finish.bind(this));
         this._poll();
     }
     /**
@@ -136,23 +137,27 @@ class ContentReviewLog {
                   rev = page.latestRevision.revisionId,
                   status = page.latestRevision.statusKey,
                   curr = this._data[title];
-            if (curr && curr.rev > rev) {
-                // memcache screwed up
-                return;
-            }
-            this._debug(`${curr.rev} -> ${rev}, ${curr.status} -> ${status}`);
-            if (
-                (curr.rev !== rev || curr.status !== status) &&
-                status !== 'unsubmitted'
-            ) {
-                embeds.push([title, rev, status]);
+            if (curr) {
+                if (curr.rev > rev) {
+                    // memcache screwed up
+                    return;
+                }
+                if (
+                    (curr.rev !== rev || curr.status !== status) &&
+                    status !== 'unsubmitted'
+                ) {
+                    this._debug(`${title}: ${curr.rev} -> ${rev}, ${curr.status} -> ${status}`);
+                    embeds.push([title, rev, status]);
+                }
             }
             this._data[title] = {
                 rev,
                 status
             };
         }
-        this._post(embeds);
+        if (embeds.length) {
+            this._post(embeds);
+        }
         fs.writeFile(
             'cache.json',
             JSON.stringify(this._data),
@@ -204,7 +209,29 @@ class ContentReviewLog {
      * @private
      */
     _discordError(error) {
-        console.error('Error while posting to Discord!', error);
+        if (error.statusCode / 100 === 4) {
+            // 4XX errors.
+            console.error(
+                'Error while posting to Discord! HTTP status',
+                error.statusCode
+            );
+            try {
+                const err = JSON.parse(error.error);
+                console.error(`Error code ${err.code}: "${err.message}".`);
+            } catch (e) {
+                console.error('Failed to parse error response.', error.error);
+            }
+        } else if (error.statusCode / 100 === 5) {
+            // 5XX errors.
+            console.error(
+                'Discord error code',
+                error.statusCode,
+                error.error
+            );
+        } else {
+            // WUT errors.
+            console.error('An unknown Discord error occurred!', error);
+        }
     }
     /**
      * Callback after saving cache.
@@ -215,6 +242,14 @@ class ContentReviewLog {
         if (error) {
             console.error('Error while saving cache!', error);
         }
+    }
+    /**
+     * Cleans up and ends the process.
+     * @private
+     */
+    _finish() {
+        console.info('Exiting...');
+        clearInterval(this._interval);
     }
 }
 

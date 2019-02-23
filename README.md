@@ -1,5 +1,5 @@
 # ContentReviewLog
-Discord webhook relay of changes to review status of Fandom scripts, mostly intended for use on [Dev Wiki's Discord server](https://dev.wikia.com/wiki/Project:Discord). Based on polling.
+Discord webhook relay of changes to review status of Fandom scripts, mostly intended for use on [Dev Wiki's Discord server](https://dev.fandom.com/wiki/Project:Discord). Based on polling.
 ![Demonstration.](https://i.imgur.com/cFC01iK.png)
 
 ## Installation

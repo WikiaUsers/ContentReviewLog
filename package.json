@@ -1,6 +1,6 @@
 {
     "name": "content-review-log",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Logs changes to review status of scripts on a Fandom wiki.",
     "keywords": [
         "wikia",
@@ -8,7 +8,7 @@
         "discord",
         "webhook"
     ],
-    "license": "GPLv3",
+    "license": "GPL-3.0-or-later",
     "author": {
         "name": "KockaAdmiralac",
         "email": "1405223@gmail.com",

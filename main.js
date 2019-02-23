@@ -15,7 +15,7 @@ const http = require('request-promise-native'),
 /**
  * Constants.
  */
-const USER_AGENT = 'ContentReviewLog v1.1.0',
+const USER_AGENT = 'ContentReviewLog v1.1.1',
       DATA = {
           awaiting: ['Revision awaiting review', 0x008CCE],
           live: ['Revision approved', 0x76BF06],
@@ -44,7 +44,7 @@ class ContentReviewLog {
             },
             jar: this._jar,
             method: 'POST',
-            uri: 'https://services.wikia.com/auth/token'
+            uri: `https://services.${config.domain}/auth/token`
         }).then(this._init.bind(this))
         .catch(this._loginFail.bind(this));
     }
@@ -170,7 +170,7 @@ class ContentReviewLog {
      * @private
      */
     _pollFail(error) {
-        console.error('Polling failed!', error);
+        console.error('Polling failed!', error.error);
     }
     /**
      * Posts a log to Discord.

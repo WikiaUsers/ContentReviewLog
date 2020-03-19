@@ -8,19 +8,22 @@
 /**
  * Importing modules.
  */
-const http = require('request-promise-native'),
-      fs = require('fs'),
-      config = require('./config.json');
+const fs = require('fs').promises,
+      process = require('process'),
+      {WebhookClient} = require('discord.js'),
+      got = require('got'),
+      {CookieJar} = require('tough-cookie'),
+      config = require('./config.json'),
+      pkg = require('./package.json');
 
 /**
  * Constants.
  */
-const USER_AGENT = 'ContentReviewLog v1.1.1',
-      DATA = {
-          awaiting: ['Revision awaiting review', 0x008CCE],
-          live: ['Revision approved', 0x76BF06],
-          rejected: ['Revision rejected', 0xE1390B]
-      };
+const DATA = {
+    awaiting: ['Revision awaiting review', 0x008CCE],
+    live: ['Revision approved', 0x76BF06],
+    rejected: ['Revision rejected', 0xE1390B]
+};
 
 /**
  * Main class for the content review logger.
@@ -28,25 +31,80 @@ const USER_AGENT = 'ContentReviewLog v1.1.1',
 class ContentReviewLog {
     /**
      * Class constructor.
-     * Logs in to Fandom.
      */
     constructor() {
-        this._jar = http.jar();
-        this._debug('Logging in...');
-        http({
-            form: {
-                password: config.password,
-                username: config.username
-            },
+        this._initHTTP();
+        this._initCache();
+        this._wiki = this._getWikiUrl(config.wiki, config.domain, config.lang);
+        process.on('SIGINT', this._finish.bind(this));
+    }
+    /**
+     * Initializes the HTTP and Discord clients used for communication with
+     * Fandom and Discord.
+     * @private
+     */
+    _initHTTP() {
+        this._webhook = new WebhookClient(config.id, config.token);
+        this._http = got.extend({
+            cookieJar: new CookieJar(),
             headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': USER_AGENT
+                'User-Agent': `${pkg.name} v${pkg.version}`
             },
-            jar: this._jar,
-            method: 'POST',
-            uri: `https://services.${config.domain}/auth/token`
-        }).then(this._init.bind(this))
-        .catch(this._loginFail.bind(this));
+            resolveBodyOnly: true,
+            responseType: 'json'
+        });
+    }
+    /**
+     * Initializes the cache for saving last review state.
+     * @private
+     */
+    _initCache() {
+        try {
+            this._data = require('./cache.json');
+        } catch (error) {
+            console.info(
+                'No cache.json file found, data will be created from scratch.'
+            );
+        }
+    }
+    /**
+     * Converts a triplet of (subdomain, domain, language) into a Fandom
+     * wiki URL.
+     * @param {string} wiki Subdomain of the wii
+     * @param {string} domain Domain of the wiki (fandom.com/wikia.org)
+     * @param {string} language Language in the wiki's article path
+     * @returns {string} URL of the wiki
+     */
+    _getWikiUrl(wiki, domain, language) {
+        if (wiki.includes('.')) {
+            const [subdomain, lang] = wiki.split('.');
+            return `https://${subdomain}.${domain}/${lang}`;
+        } else if (language) {
+            return `https://${wiki}.${domain}/${language}`;
+        }
+        return `https://${wiki}.${domain}`;
+    }
+    /**
+     * Logs into Fandom and initiates the polling.
+     */
+    async run() {
+        this._debug('Logging in...');
+        try {
+            await this._http.post(`https://services.${config.domain}/auth/token`, {
+                form: {
+                    password: config.password,
+                    username: config.username
+                }
+            });
+            this._debug('Logged in.');
+            this._interval = setInterval(
+                this._poll.bind(this),
+                config.interval
+            );
+            await this._poll();
+        } catch (error) {
+            console.error('Failed to log in!', error);
+        }
     }
     /**
      * Logs content while in debug mode.
@@ -59,127 +117,85 @@ class ContentReviewLog {
         }
     }
     /**
-     * Initializes the logger interval and reconstructs the wiki URL.
-     * @private
-     */
-    _init() {
-        this._debug('Logged in.');
-        if (config.wiki.includes('.')) {
-            this._wiki = `http://${config.wiki}.${config.domain}`;
-        } else if (config.lang) {
-            this._wiki = `https://${config.wiki}.${config.domain}/${config.lang}`;
-        } else {
-            this._wiki = `https://${config.wiki}.${config.domain}`;
-        }
-        try {
-            this._data = require('./cache.json');
-        } catch (e) {
-            console.info(
-                'No cache.json file found, data will be created from scratch.'
-            );
-        }
-        this._interval = setInterval(
-            this._poll.bind(this),
-            config.interval
-        );
-        process.on('SIGINT', this._finish.bind(this));
-        this._poll();
-    }
-    /**
-     * Callback after a failed login.
-     * @param {Error} error Error that occurred while logging in
-     * @private
-     */
-    _loginFail(error) {
-        console.error('Failed to log in!', error);
-    }
-    /**
      * Polls Nirvana for status of JavaScript pages.
      * @private
      */
-    _poll() {
+    async _poll() {
         this._debug('Polling...');
-        http({
-            headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': USER_AGENT
-            },
-            jar: this._jar,
-            json: true,
-            method: 'GET',
-            qs: {
-                controller: 'JSPagesSpecial',
-                format: 'json',
-                t: Date.now()
-            },
-            uri: `${this._wiki}/wikia.php`
-        }).then(this._callback.bind(this))
-        .catch(this._pollFail.bind(this));
-    }
-    /**
-     * Callback after fetching JavaScript status.
-     * @param {Object} data Fetched JavaScript review data
-     * @private
-     */
-    _callback(data) {
-        this._debug('Poll response.');
-        let pages = {};
-        if (data && data.jsPages) {
-            pages = data.jsPages;
-        }
-        if (!this._data) {
-            this._data = pages;
-        }
-        const embeds = [];
-        for (const i in pages) {
-            const page = pages[i],
-                  title = page.page_title,
-                  rev = page.latestRevision.revisionId,
-                  status = page.latestRevision.statusKey,
-                  curr = this._data[title];
-            if (curr) {
-                if (curr.rev > rev) {
-                    // memcache screwed up
-                    return;
+        try {
+            const data = await this._http.get(`${this._wiki}/wikia.php`, {
+                searchParams: {
+                    controller: 'JSPagesSpecial',
+                    format: 'json',
+                    t: Date.now()
                 }
-                if (
-                    (curr.rev !== rev || curr.status !== status) &&
-                    status !== 'unsubmitted'
-                ) {
-                    this._debug(`${title}: ${curr.rev} -> ${rev}, ${curr.status} -> ${status}`);
-                    embeds.push([title, rev, status]);
-                }
+            });
+            this._debug('Poll response.');
+            let pages = {};
+            if (data && data.jsPages) {
+                pages = data.jsPages;
             }
-            this._data[title] = {
-                rev,
-                status
-            };
+            if (!this._data) {
+                this._data = pages;
+            }
+            await this._post(
+                Object.values(pages)
+                    .map(this._processPage, this)
+                    .filter(Boolean)
+            );
+            await fs.writeFile('cache.json', JSON.stringify(this._data));
+        } catch (error) {
+            console.error('Polling failed!', error.error);
         }
-        if (embeds.length) {
-            this._post(embeds);
-        }
-        fs.writeFile(
-            'cache.json',
-            JSON.stringify(this._data),
-            this._fileCallback.bind(this)
-        );
     }
     /**
-     * Callback after a failed poll.
-     * @param {Error} error Poll error
-     * @private
+     * Processes received page information.
+     * If a page's revision status changed it returns the values required for
+     * Discord embeds.
+     * Also updates the currently cached information about the page.
+     * @param {string} page JavaScript page information
+     * @returns {array|undefined} Array of {title, revision, status} to be
+     *                            passed on to the Discord embed formatter.
      */
-    _pollFail(error) {
-        console.error('Polling failed!', error.error);
+    _processPage(page) {
+        const title = page.page_title,
+              rev = page.latestRevision.revisionId,
+              status = page.latestRevision.statusKey,
+              curr = this._data[title];
+        if (curr) {
+            if (curr.rev > rev) {
+                // memcache screwed up
+                return;
+            }
+            if (
+                (curr.rev !== rev || curr.status !== status) &&
+                status !== 'unsubmitted'
+            ) {
+                this._debug(`${title}: ${curr.rev} -> ${rev}, ${curr.status} -> ${status}`);
+                // TODO: DRY
+                this._data[title] = {
+                    rev,
+                    status
+                };
+                return [title, rev, status];
+            }
+        }
+        this._data[title] = {
+            rev,
+            status
+        };
     }
     /**
-     * Posts a log to Discord.
+     * Formats and posts the review status change to Discord.
      * @param {Array<Object>} embeds Embed data
      * @private
      */
-    _post(embeds) {
-        http({
-            body: JSON.stringify({
+    async _post(embeds) {
+        if (embeds.length === 0) {
+            return;
+        }
+        try {
+            await this._webhook.send({
                 embeds: embeds.map(function([title, rev, status]) {
                     const encTitle = encodeURIComponent(title);
                     let desc = `[${title}](${this._wiki}/wiki/MediaWiki:${encTitle}) | [Diff](${this._wiki}/?diff=${rev})`;
@@ -194,63 +210,21 @@ class ContentReviewLog {
                         url: `${this._wiki}/?oldid=${rev}`
                     };
                 }, this)
-            }),
-            headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': USER_AGENT
-            },
-            method: 'POST',
-            uri: `https://discordapp.com/api/webhooks/${config.id}/${config.token}`
-        }).catch(this._discordError.bind(this));
-    }
-    /**
-     * Handles errors while posting to Discord.
-     * @param {Error} error Error that occurred
-     * @private
-     */
-    _discordError(error) {
-        if (error.statusCode / 100 === 4) {
-            // 4XX errors.
-            console.error(
-                'Error while posting to Discord! HTTP status',
-                error.statusCode
-            );
-            try {
-                const err = JSON.parse(error.error);
-                console.error(`Error code ${err.code}: "${err.message}".`);
-            } catch (e) {
-                console.error('Failed to parse error response.', error.error);
-            }
-        } else if (error.statusCode / 100 === 5) {
-            // 5XX errors.
-            console.error(
-                'Discord error code',
-                error.statusCode,
-                error.error
-            );
-        } else {
-            // WUT errors.
-            console.error('An unknown Discord error occurred!', error);
+            });
+        } catch (error) {
+            console.error('Error while posting to Discord:', error);
         }
     }
     /**
-     * Callback after saving cache.
-     * @param {Error} error File save error
-     * @private
-     */
-    _fileCallback(error) {
-        if (error) {
-            console.error('Error while saving cache!', error);
-        }
-    }
-    /**
-     * Cleans up and ends the process.
+     * Cleans up the polling interval and webhook client.
      * @private
      */
     _finish() {
         console.info('Exiting...');
         clearInterval(this._interval);
+        this._webhook.destroy();
     }
 }
 
 module.exports = new ContentReviewLog();
+module.exports.run();

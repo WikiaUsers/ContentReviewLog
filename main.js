@@ -108,7 +108,7 @@ class ContentReviewLog {
     }
     /**
      * Logs content while in debug mode.
-     * @param {String} content Message to log
+     * @param {string} content Message to log
      * @private
      */
     _debug(content) {
@@ -153,14 +153,16 @@ class ContentReviewLog {
      * If a page's revision status changed it returns the values required for
      * Discord embeds.
      * Also updates the currently cached information about the page.
-     * @param {string} page JavaScript page information
-     * @returns {array|undefined} Array of {title, revision, status} to be
-     *                            passed on to the Discord embed formatter.
+     * @param {Object} page JavaScript page information
+     * @returns {Array|undefined} Array of {title, revision, status, (optional)
+     *                            live revision} to be passed on to the Discord
+     *                            embed formatter.
      */
     _processPage(page) {
         const title = page.page_title,
               rev = page.latestRevision.revisionId,
               status = page.latestRevision.statusKey,
+              liveRev = page.liveRevision.revisionId,
               curr = this._data[title];
         if (curr) {
             if (curr.rev > rev) {
@@ -177,7 +179,7 @@ class ContentReviewLog {
                     rev,
                     status
                 };
-                return [title, rev, status];
+                return [title, rev, status, liveRev];
             }
         }
         this._data[title] = {
@@ -187,7 +189,7 @@ class ContentReviewLog {
     }
     /**
      * Formats and posts the review status change to Discord.
-     * @param {Array<Object>} embeds Embed data
+     * @param {Array<Array>} embeds Embed data
      * @private
      */
     async _post(embeds) {
@@ -196,9 +198,14 @@ class ContentReviewLog {
         }
         try {
             await this._webhook.send({
-                embeds: embeds.map(function([title, rev, status]) {
+                embeds: embeds.map(function([title, rev, status, liveRev]) {
                     const encTitle = encodeURIComponent(title);
-                    let desc = `[${title}](${this._wiki}/wiki/MediaWiki:${encTitle}) | [Diff](${this._wiki}/?diff=${rev})`;
+                    let desc = `[${title}](${this._wiki}/wiki/MediaWiki:${encTitle}) | `;
+                    if (rev !== liveRev && liveRev !== undefined) {
+                        desc += `[Diff](${this._wiki}/?oldid=${liveRev}&diff=${rev})`;
+                    } else {
+                        desc += `[Permalink](${this._wiki}/?oldid=${rev})`;
+                    }
                     if (status === 'rejected') {
                         desc += ` | [Talk page](${this._wiki}/wiki/MediaWiki_talk:${encTitle})`;
                     }

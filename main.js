@@ -165,8 +165,18 @@ class ContentReviewLog {
               liveRev = page.liveRevision.revisionId,
               curr = this._data[title];
         if (curr) {
-            if (curr.rev > rev) {
-                // memcache screwed up
+            if (
+                // If the new revision is older
+                curr.rev > rev ||
+                (
+                    // or the revision stayed the same
+                    curr.rev === rev &&
+                    // but the status went back to unreviewed
+                    curr.status !== 'awaiting' &&
+                    status === 'awaiting'
+                )
+            ) {
+                // that means memcache somehow screwed up.
                 return;
             }
             if (

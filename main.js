@@ -168,12 +168,19 @@ class ContentReviewLog {
             if (
                 // If the new revision is older
                 curr.rev > rev ||
+                // or the revision stayed the same
+                curr.rev === rev &&
+                // but the status went back to
                 (
-                    // or the revision stayed the same
-                    curr.rev === rev &&
-                    // but the status went back to unreviewed
-                    curr.status !== 'awaiting' &&
-                    status === 'awaiting'
+                    // awaiting
+                    (
+                        curr.status === 'live' ||
+                        curr.status === 'rejected'
+                    ) &&
+                    status === 'awaiting' ||
+                    // or unsubmitted
+                    curr.status !== 'unsubmitted' &&
+                    status === 'unsubmitted'
                 )
             ) {
                 // that means memcache somehow screwed up.

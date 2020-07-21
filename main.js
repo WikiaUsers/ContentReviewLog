@@ -165,6 +165,7 @@ class ContentReviewLog {
               liveRev = page.liveRevision.revisionId,
               curr = this._data[title];
         if (curr) {
+            console.debug('Current revision is cached:', curr);
             if (
                 // If the new revision is older
                 curr.rev > rev ||
@@ -198,7 +199,13 @@ class ContentReviewLog {
                 };
                 return [title, rev, status, liveRev];
             }
+        } else {
+            console.debug('Current revision is not cached.');
         }
+        console.debug('Replacing', curr, 'with', {
+            rev,
+            status
+        });
         this._data[title] = {
             rev,
             status

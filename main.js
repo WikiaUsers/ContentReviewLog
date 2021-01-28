@@ -8,13 +8,14 @@
 /**
  * Importing modules.
  */
-const fs = require('fs').promises,
-      process = require('process'),
-      {WebhookClient} = require('discord.js'),
-      got = require('got'),
-      {CookieJar} = require('tough-cookie'),
-      config = require('./config.json'),
-      pkg = require('./package.json');
+const fs = require('fs/promises');
+const process = require('process');
+const { WebhookClient } = require('discord.js');
+const got = require('got');
+const { CookieJar } = require('tough-cookie');
+const { parse, HTMLElement } = require('node-html-parser');
+const config = require('./config.json');
+const pkg = require('./package.json');
 
 /**
  * Constants.
@@ -49,9 +50,7 @@ class ContentReviewLog {
             cookieJar: new CookieJar(),
             headers: {
                 'User-Agent': `${pkg.name} v${pkg.version}`
-            },
-            resolveBodyOnly: true,
-            responseType: 'json'
+            }
         });
     }
     /**
@@ -123,21 +122,20 @@ class ContentReviewLog {
     async _poll() {
         this._debug('Polling...');
         try {
-            const data = await this._http.get(`${this._wiki}/wikia.php`, {
+            const html = await this._http.get(`${this._wiki}/wiki/Special:JSPages`, {
                 searchParams: {
-                    controller: 'JSPagesSpecial',
-                    format: 'json',
                     t: Date.now()
                 }
-            });
-            this._debug('Poll response.');
-            let pages = {};
-            if (data && data.jsPages) {
-                pages = data.jsPages;
-            }
+            }).text();
+            const tree = parse(html);
+            const rows = tree.querySelectorAll('.content-review__table tbody tr');
+            const pages = this.mapRows(rows);
+
             if (!this._data) {
                 this._data = pages;
             }
+
+            this._debug('Poll response.');
             await this._post(
                 Object.values(pages)
                     .map(this._processPage, this)
@@ -145,9 +143,47 @@ class ContentReviewLog {
             );
             await fs.writeFile('cache.json', JSON.stringify(this._data));
         } catch (error) {
-            console.error('Polling failed!', error.error);
+            console.error('Polling failed!', error);
         }
     }
+
+    /**
+     * Maps a row
+     *
+     * @param {HTMLElement[]} rows
+     */
+    mapRows(rows) {
+        const map = {};
+
+        for (const row of rows) {
+            // Code below is pretty dense, but that's unavoidable when scraping
+            // I added some newlines, if that helps
+            const cells = row.querySelectorAll('td');
+
+            const title = cells[0].querySelector('a').text.trim();
+
+            const status = cells[1].querySelector('.content-review__status').classNames
+                .find(cls => cls.startsWith('content-review__status--'))
+                .slice('content-review__status--'.length);
+
+            const latestRevision = Number(cells[1].querySelector('a').text.trim().replace('#', ''));
+
+            const liveRevisionAnchor = cells[3].querySelector('a');
+            const liveRevision = liveRevisionAnchor
+                ? Number(liveRevisionAnchor.text.trim().replace('#', ''))
+                : undefined;
+
+            map[title] = {
+                title,
+                status,
+                latestRevision,
+                liveRevision
+            };
+        }
+
+        return map;
+    }
+
     /**
      * Processes received page information.
      * If a page's revision status changed it returns the values required for
@@ -159,11 +195,18 @@ class ContentReviewLog {
      *                            embed formatter.
      */
     _processPage(page) {
-        const title = page.page_title,
-              rev = page.latestRevision.revisionId,
-              status = page.latestRevision.statusKey,
-              liveRev = page.liveRevision.revisionId,
-              curr = this._data[title];
+        const title = page.title;
+        const status = page.status;
+        const rev = page.latestRevision;
+        const liveRev = page.liveRevision;
+        const curr = this._data[title];
+
+        // Save to cache
+        this._data[title] = {
+            rev,
+            status
+        };
+
         if (curr) {
             if (
                 // If the new revision is older
@@ -184,6 +227,7 @@ class ContentReviewLog {
                 )
             ) {
                 // that means memcache somehow screwed up.
+                // - Then log it, dummy
                 return;
             }
             if (
@@ -191,20 +235,12 @@ class ContentReviewLog {
                 status !== 'unsubmitted'
             ) {
                 this._debug(`${title}: ${curr.rev} -> ${rev}, ${curr.status} -> ${status}`);
-                // TODO: DRY
-                this._data[title] = {
-                    rev,
-                    status
-                };
+
                 return [title, rev, status, liveRev];
             }
         } else {
             console.debug('Current revision is not cached.');
         }
-        this._data[title] = {
-            rev,
-            status
-        };
     }
     /**
      * Formats and posts the review status change to Discord.
@@ -215,19 +251,23 @@ class ContentReviewLog {
         if (embeds.length === 0) {
             return;
         }
+
         try {
             await this._webhook.send({
-                embeds: embeds.map(function([title, rev, status, liveRev]) {
+                embeds: embeds.map(([title, rev, status, liveRev]) => {
                     const encTitle = encodeURIComponent(title);
                     let desc = `[${title}](${this._wiki}/wiki/MediaWiki:${encTitle}) | `;
+
                     if (rev !== liveRev && liveRev !== undefined) {
                         desc += `[Diff](${this._wiki}/?oldid=${liveRev}&diff=${rev})`;
                     } else {
                         desc += `[Permalink](${this._wiki}/?oldid=${rev})`;
                     }
+
                     if (status === 'rejected') {
                         desc += ` | [Talk page](${this._wiki}/wiki/MediaWiki_talk:${encTitle})`;
                     }
+
                     return {
                         color: DATA[status][1],
                         description: desc,
@@ -235,7 +275,7 @@ class ContentReviewLog {
                         title: DATA[status][0],
                         url: `${this._wiki}/?oldid=${rev}`
                     };
-                }, this)
+                })
             });
         } catch (error) {
             console.error('Error while posting to Discord:', error);

@@ -28,6 +28,7 @@
     "dependencies": {
         "discord.js": ">=12.2.0",
         "got": ">=11.5.1",
+        "node-html-parser": "^2.0.2",
         "tough-cookie": ">=4.0.0"
     },
     "devDependencies": {

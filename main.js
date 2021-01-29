@@ -201,11 +201,8 @@ class ContentReviewLog {
         const liveRev = page.liveRevision;
         const curr = this._data[title];
 
-        // Save to cache
-        this._data[title] = {
-            rev,
-            status
-        };
+        let returnValue;
+        let shouldSave = true;
 
         if (curr) {
             if (
@@ -228,19 +225,28 @@ class ContentReviewLog {
             ) {
                 // that means memcache somehow screwed up.
                 // - Then log it, dummy
-                return;
-            }
-            if (
+                shouldSave = false;
+            } else if (
                 (curr.rev !== rev || curr.status !== status) &&
                 status !== 'unsubmitted'
             ) {
                 this._debug(`${title}: ${curr.rev} -> ${rev}, ${curr.status} -> ${status}`);
 
-                return [title, rev, status, liveRev];
+                returnValue = [title, rev, status, liveRev];
             }
         } else {
-            console.debug('Current revision is not cached.');
+            this._debug('Current revision is not cached.');
         }
+
+        // Save to cache
+        if (shouldSave) {
+            this._data[title] = {
+                rev,
+                status
+            };
+        }
+
+        return returnValue;
     }
     /**
      * Formats and posts the review status change to Discord.

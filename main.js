@@ -10,10 +10,10 @@
  */
 const fs = require('fs/promises');
 const process = require('process');
-const { WebhookClient } = require('discord.js');
+const {WebhookClient} = require('discord.js');
 const got = require('got');
-const { CookieJar } = require('tough-cookie');
-const { parse, HTMLElement } = require('node-html-parser');
+const {CookieJar} = require('tough-cookie');
+const {parse} = require('node-html-parser');
 const config = require('./config.json');
 const pkg = require('./package.json');
 
@@ -128,7 +128,8 @@ class ContentReviewLog {
                 }
             }).text();
             const tree = parse(html);
-            const rows = tree.querySelectorAll('.content-review__table tbody tr');
+            const rows = tree
+                .querySelectorAll('.content-review__table tbody tr');
             const pages = this.mapRows(rows);
 
             if (!this._data) {
@@ -146,44 +147,49 @@ class ContentReviewLog {
             console.error('Polling failed!', error);
         }
     }
-
     /**
      * Maps a row
-     *
-     * @param {HTMLElement[]} rows
+     * @param {node-html-parser.HTMLElement[]} rows Rows of the
+     *                                              content review table
+     * @returns {Object<string, object>} Map of page titles to review statuses
      */
     mapRows(rows) {
         const map = {};
 
         for (const row of rows) {
-            // Code below is pretty dense, but that's unavoidable when scraping
-            // I added some newlines, if that helps
+            /*
+             * Code below is pretty dense, but that's unavoidable when scraping
+             * I added some newlines, if that helps
+             */
             const cells = row.querySelectorAll('td');
 
             const title = cells[0].querySelector('a').text.trim();
 
-            const status = cells[1].querySelector('.content-review__status').classNames
+            const status = cells[1].querySelector('.content-review__status')
+                .classNames
                 .find(cls => cls.startsWith('content-review__status--'))
                 .slice('content-review__status--'.length);
 
-            const latestRevision = Number(cells[1].querySelector('a').text.trim().replace('#', ''));
+            const latestRevision = Number(cells[1].querySelector('a')
+                .text
+                .trim()
+                .replace('#', ''));
 
             const liveRevisionAnchor = cells[3].querySelector('a');
-            const liveRevision = liveRevisionAnchor
-                ? Number(liveRevisionAnchor.text.trim().replace('#', ''))
-                : undefined;
+            const liveRevision = liveRevisionAnchor ?
+                Number(liveRevisionAnchor.text.trim().replace('#', '')) :
+                undefined;
 
             map[title] = {
-                title,
-                status,
                 latestRevision,
-                liveRevision
+                liveRevision,
+                status,
+                title
             };
         }
 
         return map;
     }
-
     /**
      * Processes received page information.
      * If a page's revision status changed it returns the values required for
@@ -195,13 +201,13 @@ class ContentReviewLog {
      *                            embed formatter.
      */
     _processPage(page) {
-        const title = page.title;
-        const status = page.status;
+        const {title} = page;
+        const {status} = page;
         const rev = page.latestRevision;
         const liveRev = page.liveRevision;
         const curr = this._data[title];
 
-        let returnValue;
+        let returnValue = null;
         let shouldSave = true;
 
         if (curr) {
@@ -223,8 +229,10 @@ class ContentReviewLog {
                     status === 'unsubmitted'
                 )
             ) {
-                // that means memcache somehow screwed up.
-                // - Then log it, dummy
+                /*
+                 * that means memcache somehow screwed up.
+                 * - Then log it, dummy
+                 */
                 shouldSave = false;
             } else if (
                 (curr.rev !== rev || curr.status !== status) &&
@@ -260,7 +268,7 @@ class ContentReviewLog {
 
         try {
             await this._webhook.send({
-                embeds: embeds.map(([title, rev, status, liveRev]) => {
+                embeds: embeds.map(function([title, rev, status, liveRev]) {
                     const encTitle = encodeURIComponent(title);
                     let desc = `[${title}](${this._wiki}/wiki/MediaWiki:${encTitle}) | `;
 
@@ -281,7 +289,7 @@ class ContentReviewLog {
                         title: DATA[status][0],
                         url: `${this._wiki}/?oldid=${rev}`
                     };
-                })
+                }, this)
             });
         } catch (error) {
             console.error('Error while posting to Discord:', error);

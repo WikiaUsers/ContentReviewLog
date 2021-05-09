@@ -1,6 +1,6 @@
 {
     "name": "content-review-log",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "description": "Logs changes to review status of scripts on a Fandom wiki.",
     "keywords": [
         "wikia",
@@ -26,12 +26,12 @@
         "url": "https://github.com/WikiaUsers/ContentReviewLog.git"
     },
     "dependencies": {
-        "discord.js": ">=12.2.0",
-        "got": ">=11.5.1",
-        "node-html-parser": "^2.0.2",
+        "discord.js": ">=12.5.3",
+        "got": ">=11.8.2",
+        "node-html-parser": ">=3.2.0",
         "tough-cookie": ">=4.0.0"
     },
     "devDependencies": {
-        "eslint": ">=7.5.0"
+        "eslint": ">=7.26.0"
     }
 }

@@ -167,9 +167,11 @@ class ContentReviewLog {
             const cells = row.querySelectorAll('td');
 
             const title = cells[0].querySelector('a').text.trim();
-
-            const status = cells[1].querySelector('.content-review__status')
-                .classNames
+            const status = Array.from(
+                cells[1].querySelector('.content-review__status')
+                    .classList
+                    .values()
+            )
                 .find(cls => cls.startsWith('content-review__status--'))
                 .slice('content-review__status--'.length);
 

@@ -93,6 +93,9 @@ class ContentReviewLog {
                 form: {
                     password: config.password,
                     username: config.username
+                },
+                headers: {
+                    'X-Wikia-WikiaAppsID': 1234
                 }
             });
             this._debug('Logged in.');

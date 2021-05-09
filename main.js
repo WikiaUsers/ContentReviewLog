@@ -175,19 +175,19 @@ class ContentReviewLog {
                 .find(cls => cls.startsWith('content-review__status--'))
                 .slice('content-review__status--'.length);
 
-            const latestRevision = Number(cells[1].querySelector('a')
+            const rev = Number(cells[1].querySelector('a')
                 .text
                 .trim()
                 .replace('#', ''));
 
             const liveRevisionAnchor = cells[3].querySelector('a');
-            const liveRevision = liveRevisionAnchor ?
+            const liveRev = liveRevisionAnchor ?
                 Number(liveRevisionAnchor.text.trim().replace('#', '')) :
                 undefined;
 
             map[title] = {
-                latestRevision,
-                liveRevision,
+                liveRev,
+                rev,
                 status,
                 title
             };
@@ -206,10 +206,7 @@ class ContentReviewLog {
      *                            embed formatter.
      */
     _processPage(page) {
-        const {title} = page;
-        const {status} = page;
-        const rev = page.latestRevision;
-        const liveRev = page.liveRevision;
+        const {title, status, rev, liveRev} = page;
         const curr = this._data[title];
 
         let returnValue = null;
@@ -254,8 +251,10 @@ class ContentReviewLog {
         // Save to cache
         if (shouldSave) {
             this._data[title] = {
+                liveRev,
                 rev,
-                status
+                status,
+                title
             };
         }
 

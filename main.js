@@ -46,7 +46,10 @@ class ContentReviewLog {
      * @private
      */
     _initHTTP() {
-        this._webhook = new WebhookClient(config.id, config.token);
+        this._webhook = new WebhookClient({
+            id: config.id,
+            token: config.token
+        });
         this._http = got.extend({
             cookieJar: new CookieJar(),
             headers: {

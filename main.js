@@ -4,19 +4,18 @@
  *
  * Content review logger.
  */
-'use strict';
 
 /**
  * Importing modules.
  */
-const fs = require('fs/promises');
-const process = require('process');
-const {WebhookClient} = require('discord.js');
-const got = require('got');
-const {CookieJar} = require('tough-cookie');
-const {parse} = require('node-html-parser');
-const config = require('./config.json');
-const pkg = require('./package.json');
+import {CookieJar} from 'tough-cookie';
+import {WebhookClient} from 'discord.js';
+import config from './config.json';
+import got from 'got';
+import {parse} from 'node-html-parser';
+import pkg from './package.json';
+import process from 'process';
+import {writeFile} from 'fs/promises';
 
 /**
  * Constants.
@@ -149,7 +148,7 @@ class ContentReviewLog {
                     .map(this._processPage, this)
                     .filter(Boolean)
             );
-            await fs.writeFile('cache.json', JSON.stringify(this._data));
+            await writeFile('cache.json', JSON.stringify(this._data));
         } catch (error) {
             console.error('Polling failed!', error);
         }
@@ -314,5 +313,6 @@ class ContentReviewLog {
     }
 }
 
-module.exports = new ContentReviewLog();
-module.exports.run();
+const instance = new ContentReviewLog();
+export default instance;
+instance.run();

@@ -92,12 +92,13 @@ class ContentReviewLog {
     async run() {
         this._debug('Logging in...');
         try {
-            await this._http.post(`https://services.${config.domain}/auth/token`, {
+            await this._http.post(`https://services.${config.domain}/mobile-fandom-app/fandom-auth/login`, {
                 form: {
                     password: config.password,
                     username: config.username
                 },
                 headers: {
+                    'X-Fandom-Auth': 1,
                     'X-Wikia-WikiaAppsID': 1234
                 }
             });

@@ -21,7 +21,7 @@ const QUESTIONS = [
     ['url', 'Webhook URL'],
     ['wiki', 'Fandom wiki URL']
 ], WIKI_REGEX = /^(?:https?:\/\/)?([a-z0-9-.]+)\.(wikia\.(?:com|org)|fandom\.com)(?:\/([a-z-]+))?\/?$/,
-WEBHOOK_REGEX = /^https?:\/\/(?:canary\.|ptb\.)?discordapp\.com\/api\/webhooks\/(\d+)\/([a-zA-Z0-9-_]+)$/;
+WEBHOOK_REGEX = /^https?:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/(\d+)\/([a-zA-Z0-9-_]+)$/;
 
 /**
  * Class used for configuration of ContentReviewLog.

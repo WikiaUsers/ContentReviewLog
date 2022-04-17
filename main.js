@@ -10,10 +10,10 @@
  */
 import {CookieJar} from 'tough-cookie';
 import {WebhookClient} from 'discord.js';
-import config from './config.json';
+import config from './config.json' assert { type: 'json' };
 import got from 'got';
 import {parse} from 'node-html-parser';
-import pkg from './package.json';
+import pkg from './package.json' assert { type: 'json' };
 import process from 'process';
 import {writeFile} from 'fs/promises';
 
@@ -92,13 +92,14 @@ class ContentReviewLog {
     async run() {
         this._debug('Logging in...');
         try {
-            await this._http.post(`https://services.${config.domain}/auth/token`, {
+            await this._http.post(`https://services.${config.domain}/mobile-fandom-app/fandom-auth/login`, {
                 form: {
                     password: config.password,
                     username: config.username
                 },
                 headers: {
-                    'X-Wikia-WikiaAppsID': 1234
+                    'X-Wikia-WikiaAppsID': 1234,
+                    'X-Fandom-Auth': 1
                 }
             });
             this._debug('Logged in.');

@@ -8,8 +8,8 @@
 /**
  * Importing modules.
  */
-const fs = require('fs'),
-      readline = require('readline');
+import fs from 'fs';
+import readline from 'readline';
 
 /**
  * Constants.
@@ -112,4 +112,5 @@ class Configuration {
     }
 }
 
-module.exports = new Configuration();
+const instance = new Configuration();
+export default instance;

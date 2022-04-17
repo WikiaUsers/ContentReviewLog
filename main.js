@@ -98,8 +98,8 @@ class ContentReviewLog {
                     username: config.username
                 },
                 headers: {
-                    'X-Wikia-WikiaAppsID': 1234,
-                    'X-Fandom-Auth': 1
+                    'X-Fandom-Auth': 1,
+                    'X-Wikia-WikiaAppsID': 1234
                 }
             });
             this._debug('Logged in.');

@@ -8,14 +8,20 @@
 /**
  * Importing modules.
  */
+import {dirname, join} from 'path';
 import {readFile, writeFile} from 'fs/promises';
 import {CookieJar} from 'tough-cookie';
 import {WebhookClient} from 'discord.js';
 import config from './config.json';
+import {fileURLToPath} from 'url';
 import got from 'got';
 import {parse} from 'node-html-parser';
 import pkg from './package.json';
 import process from 'process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const cachePath = join(__dirname, 'cache.json');
 
 /**
  * Constants.
@@ -62,7 +68,7 @@ class ContentReviewLog {
      */
     async _initCache() {
         try {
-            const data = await readFile('./cache.json', 'utf-8');
+            const data = await readFile(cachePath, 'utf-8');
             this._data = JSON.parse(data);
         } catch (error) {
             console.info(
@@ -150,7 +156,7 @@ class ContentReviewLog {
                     .map(this._processPage, this)
                     .filter(Boolean)
             );
-            await writeFile('cache.json', JSON.stringify(this._data));
+            await writeFile(cachePath, JSON.stringify(this._data));
         } catch (error) {
             console.error('Polling failed!', error);
         }

@@ -8,6 +8,7 @@
 /**
  * Importing modules.
  */
+import {readFile, writeFile} from 'fs/promises';
 import {CookieJar} from 'tough-cookie';
 import {WebhookClient} from 'discord.js';
 import config from './config.json';
@@ -15,7 +16,6 @@ import got from 'got';
 import {parse} from 'node-html-parser';
 import pkg from './package.json';
 import process from 'process';
-import {writeFile} from 'fs/promises';
 
 /**
  * Constants.
@@ -60,9 +60,10 @@ class ContentReviewLog {
      * Initializes the cache for saving last review state.
      * @private
      */
-    _initCache() {
+    async _initCache() {
         try {
-            this._data = require('./cache.json');
+            const data = await readFile('./cache.json', 'utf-8');
+            this._data = JSON.parse(data);
         } catch (error) {
             console.info(
                 'No cache.json file found, data will be created from scratch.'

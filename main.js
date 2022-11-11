@@ -35,7 +35,6 @@ class ContentReviewLog {
      */
     constructor() {
         this._initHTTP();
-        this._initCache();
         this._wiki = this._getWikiUrl(config.wiki, config.domain, config.lang);
         process.on('SIGINT', this._finish.bind(this));
     }
@@ -60,9 +59,14 @@ class ContentReviewLog {
      * Initializes the cache for saving last review state.
      * @private
      */
-    _initCache() {
+    async _initCache() {
         try {
-            this._data = require('./cache.json');
+            this._data = (await import('./cache.json', {
+                assert: {
+                    type: 'json'
+                }
+            })).default;
+            console.log(this._data);
         } catch (error) {
             console.info(
                 'No cache.json file found, data will be created from scratch.'
@@ -90,6 +94,7 @@ class ContentReviewLog {
      * Logs into Fandom and initiates the polling.
      */
     async run() {
+        await this._initCache();
         this._debug('Logging in...');
         try {
             await this._http.post(`https://services.${config.domain}/mobile-fandom-app/fandom-auth/login`, {

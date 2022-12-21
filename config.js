@@ -3,7 +3,6 @@
  *
  * Utility module for configuring ContentReviewLog.
  */
-'use strict';
 
 /**
  * Importing modules.

@@ -1,6 +1,6 @@
 {
     "name": "content-review-log",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "description": "Logs changes to review status of scripts on a Fandom wiki.",
     "keywords": [
         "wikia",
@@ -28,11 +28,11 @@
     "dependencies": {
         "discord.js": "14.7.1",
         "got": "12.5.3",
-        "node-html-parser": "6.1.4",
+        "node-html-parser": "6.1.5",
         "tough-cookie": "4.1.2"
     },
     "devDependencies": {
-        "eslint": "8.30.0"
+        "eslint": "8.34.0"
     },
     "engines": {
         "node": "16.x"

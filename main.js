@@ -10,10 +10,10 @@
  */
 import {CookieJar} from 'tough-cookie';
 import {WebhookClient} from 'discord.js';
-import config from './config.json' assert {type: 'json'};
+import config from './config.json' with {type: 'json'};
 import got from 'got';
 import {parse} from 'node-html-parser';
-import pkg from './package.json' assert {type: 'json'};
+import pkg from './package.json' with {type: 'json'};
 import process from 'process';
 import {writeFile} from 'fs/promises';
 

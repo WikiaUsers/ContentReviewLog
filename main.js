@@ -62,7 +62,7 @@ class ContentReviewLog {
     async _initCache() {
         try {
             this._data = (await import('./cache.json', {
-                assert: {
+                with: {
                     type: 'json'
                 }
             })).default;

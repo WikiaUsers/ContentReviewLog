@@ -73,7 +73,7 @@ class ContentReviewLog {
                     'No cache.json file found, data will be created from scratch.'
                 );
             } else {
-                throw new Error(error);
+                throw error;
             }
         }
     }

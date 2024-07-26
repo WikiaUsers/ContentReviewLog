@@ -66,7 +66,6 @@ class ContentReviewLog {
                     type: 'json'
                 }
             })).default;
-            console.log(this._data);
         } catch (error) {
             console.info(
                 'No cache.json file found, data will be created from scratch.'

@@ -67,9 +67,13 @@ class ContentReviewLog {
                 }
             })).default;
         } catch (error) {
-            console.info(
-                'No cache.json file found, data will be created from scratch.'
-            );
+            if (error.code === 'ERR_MODULE_NOT_FOUND') {
+                console.info(
+                    'No cache.json file found, data will be created from scratch.'
+                );
+            } else {
+                throw error;
+            }
         }
     }
     /**

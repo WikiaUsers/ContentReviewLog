@@ -32,7 +32,7 @@
         "tough-cookie": "4.1.4"
     },
     "devDependencies": {
-        "eslint": "8.56.0"
+        "eslint": "9.15.0"
     },
     "engines": {
         "node": "22.x"

@@ -27,7 +27,7 @@
     },
     "dependencies": {
         "discord.js": "14.15.3",
-        "got": "14.4.1",
+        "got": "14.4.5",
         "node-html-parser": "6.1.13",
         "tough-cookie": "4.1.4"
     },

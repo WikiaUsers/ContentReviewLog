@@ -26,10 +26,10 @@
         "url": "https://github.com/WikiaUsers/ContentReviewLog.git"
     },
     "dependencies": {
-        "discord.js": "14.15.3",
-        "got": "14.4.1",
-        "node-html-parser": "6.1.13",
-        "tough-cookie": "4.1.4"
+        "discord.js": "14.18.0",
+        "got": "14.4.6",
+        "node-html-parser": "7.0.1",
+        "tough-cookie": "5.1.2"
     },
     "devDependencies": {
         "@eslint/compat": "^1.2.3",
